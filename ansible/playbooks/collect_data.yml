@@ -1,0 +1,107 @@
+---
+- name: Query Proxmox nodes
+  hosts: proxmox_nodes
+  gather_facts: false
+  connection: local
+
+  vars:
+    pve_host: "{{ ansible_host }}"
+    pve_token_id: "{{ vault_pve_token_id }}"
+    pve_token_secret: "{{ vault_pve_token_secret }}"
+
+  tasks:
+    - name: Get node list
+      ansible.builtin.uri:
+        url: "https://{{ pve_host }}:8006/api2/json/nodes"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: node_list
+
+    - name: Require update_node
+      ansible.builtin.assert:
+        that:
+          - update_node is defined
+          - update_node | length > 0
+        fail_msg: "You must pass update_node, for example: -e 'update_node=pve03'"
+
+    - name: Validate update_node exists in cluster
+      ansible.builtin.assert:
+        that:
+          - update_node in (node_list.json.data | map(attribute='node') | list)
+        fail_msg: "Node {{ update_node }} does not exist in this cluster"
+
+    - name: Get CPU info for each node
+      ansible.builtin.uri:
+        url: "https://{{ pve_host }}:8006/api2/json/nodes/{{ item.node }}/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      loop: "{{ node_list.json.data }}"
+      register: node_status
+
+    - name: Show CPU usage for each node
+      ansible.builtin.debug:
+        msg: "{{ item.item.node }} CPU usage: {{ (item.json.data.cpu * 100) | round(2) }}%"
+      loop: "{{ node_status.results}}"    
+    
+    - name: Show nodes
+      ansible.builtin.debug:
+        var: node_list.json.data
+
+    - name: Build sanitized node metrics
+      ansible.builtin.set_fact:
+        node_metrics: "{{ node_metrics | default([]) + [ {
+          'node': item.item.node,
+          'cpu': item.json.data.cpu,
+          'mem_used_bytes': item.json.data.memory.used,
+          'mem_total_bytes': item.json.data.memory.total,
+          'uptime_seconds': item.json.data.uptime
+        } ] }}"
+      loop: "{{ node_status.results}}"
+      no_log: true
+
+    - name: Collect VM list from update_node
+      ansible.builtin.uri:
+        url:  "https://{{ pve_host }}:8006/api2/json/nodes/{{ update_node }}/qemu"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: update_node_vms
+
+    - name: Initialize VM metrics
+      ansible.builtin.set_fact:
+        vm_metrics: []
+
+    - name: Build VM metrics for update_node
+      ansible.builtin.set_fact:
+        vm_metrics: "{{ vm_metrics + [ {
+          'vmid': item.vmid,
+          'name': item.name | default('unknown'),
+          'node': update_node,
+          'status': item.status | default('unknown'),
+          'cpus': item.cpus | default(0),
+          'maxmem_bytes': item.maxmem | default(0),
+          'diskread': item.diskread | default(0),
+          'diskwrite': item.diskwrite | default(0)
+        } ] }}"
+      loop: "{{ update_node_vms.json.data }}"
+
+    - name: Save sanitized inventory
+      ansible.builtin.copy:
+        content: >-
+          {{
+            {
+              'update_node': update_node,
+              'nodes': node_metrics,
+              'vms_to_evac': vm_metrics
+            } | to_nice_json
+          }}
+        dest: /opt/proxmox-automation/output/proxmox_inventory.json
+        mode: '0600'
