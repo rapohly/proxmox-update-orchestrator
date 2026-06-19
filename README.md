@@ -56,7 +56,6 @@ Responsible for:
 * Draining nodes (migration triggers)
 * Running system updates
 * Rebooting hosts
-* Waiting for SSH availability
 * Verifying services and node readiness
 
 ---
@@ -65,7 +64,6 @@ Responsible for:
 
 * Python 3.10+
 * Ansible Core (installed via pip)
-* SSH access to all Proxmox nodes
 * Sudo privileges on target nodes
 * Linux control machine (recommended)
 
