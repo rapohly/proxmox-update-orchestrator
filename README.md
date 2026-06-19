@@ -65,7 +65,7 @@ Responsible for:
 * Python 3.10+
 * Ansible Core (installed via pip)
 * Sudo privileges on target nodes
-* Linux control machine (recommended)
+* Linux control machine (Proxmox Datacenter Manager recommended)
 
 ---
 
