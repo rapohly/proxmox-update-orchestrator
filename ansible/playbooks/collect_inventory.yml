@@ -4,21 +4,20 @@
   gather_facts: false
   connection: local
 
-  vars:
-    pve_host: "{{ ansible_host }}"
-    pve_token_id: "{{ vault_pve_token_id }}"
-    pve_token_secret: "{{ vault_pve_token_secret }}"
-
   tasks:
     - name: Get node list
       ansible.builtin.uri:
-        url: "https://{{ pve_host }}:8006/api2/json/nodes"
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
         validate_certs: false
         return_content: true
       register: node_list
+
+    - name: Show node list
+      ansible.builtin.debug:
+        var: node_list.json.data
 
     - name: Require update_node
       ansible.builtin.assert:
@@ -35,7 +34,7 @@
 
     - name: Get CPU info for each node
       ansible.builtin.uri:
-        url: "https://{{ pve_host }}:8006/api2/json/nodes/{{ item.node }}/status"
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.node }}/status"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -46,7 +45,7 @@
 
     - name: Get node RRD metrics
       ansible.builtin.uri:
-        url: "https://{{ pve_host }}:8006/api2/json/nodes/{{ item.node }}/rrddata?timeframe=hour"
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.node }}/rrddata?timeframe=hour"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -87,7 +86,7 @@
 
     - name: Collect VM list from update_node
       ansible.builtin.uri:
-        url:  "https://{{ pve_host }}:8006/api2/json/nodes/{{ update_node }}/qemu"
+        url:  "https://{{ ansible_host }}:8006/api2/json/nodes/{{ update_node }}/qemu"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -97,7 +96,7 @@
 
     - name: Collect VM metrics
       ansible.builtin.uri:
-        url: "https://{{ pve_host }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/status/current"
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/status/current"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -144,11 +143,11 @@
         dest: /opt/proxmox-automation/output/proxmox_inventory.json
         mode: '0600'
 
-    - name: Run migration planner
-      ansible.builtin.command:
-        cmd: python3 /opt/proxmox-automation/plan_migration.py
-      register: migration_plan
+    # - name: Run migration planner
+    #   ansible.builtin.command:
+    #     cmd: python3 /opt/proxmox-automation/plan_migration.py
+    #   register: migration_plan
 
-    - name: Show planner output
-      ansible.builtin.debug:
-        var: migration_plan.stdout_lines
+    # - name: Show planner output
+    #   ansible.builtin.debug:
+    #     var: migration_plan.stdout_lines
