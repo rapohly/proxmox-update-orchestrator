@@ -1,6 +1,6 @@
 ---
 - name: Query Proxmox nodes
-  hosts: pve_clusters
+  hosts: api_host
   gather_facts: false
   connection: local
 
