@@ -9,6 +9,6 @@ terraform {
 
 provider "proxmox" {
   endpoint  = "https://pve-node-01.dev.local:8006/"
-  api_token = "add_token_here"
+  api_token = ""
   insecure = true
 }

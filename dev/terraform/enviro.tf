@@ -7,7 +7,7 @@ locals {
   ]
 }
 
-resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
+resource "proxmox_virtual_environment_vm" "ubuntu_vm_small" {
   count = 4
   name      = "test-vm-${count.index + 1}"
   node_name = local.nodes[count.index % length(local.nodes)]
@@ -29,12 +29,11 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
 
   cpu {
     cores        = 2
-    type         = "host" 
+    type         = "host"
   }
 
   memory {
-    dedicated = 2048
-    floating  = 2048 # set equal to dedicated to enable ballooning
+    dedicated = 4096
   }
 
   cdrom {
@@ -47,5 +46,10 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
     iothread  = true
     discard   = "on"
     size      = 20
+  }
+  
+  network_device {
+    bridge = "vmbr0"
+    model  = "virtio"
   }
 }

@@ -5,12 +5,10 @@ import time
 while True:
 
     duration = random.randint(30, 3600)
-    #cpu = 1
-    vm = 2
+    vm = random.randint(1, 3)
 
     subprocess.run([
         "stress-ng",
-    #    "--cpu", str(cpu),
         "--vm", str(vm),
         "--timeout", f"{duration}s"
     ])
