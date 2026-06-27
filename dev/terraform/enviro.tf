@@ -5,12 +5,23 @@ locals {
     "pve-node-03",
     "pve-node-04"
   ]
+  template_vmids = [
+    "101",
+    "104",
+    "105",
+    "106"
+  ]
 }
 
 resource "proxmox_virtual_environment_vm" "ubuntu_vm_small" {
-  count = 4
+
+  count = 10
   name      = "test-vm-${count.index + 1}"
   node_name = local.nodes[count.index % length(local.nodes)]
+
+  clone {
+    vm_id = local.template_vmids[count.index % length(local.nodes)]
+  }
 
   # should be true if qemu agent is not installed / enabled on the VM
   stop_on_destroy = true
@@ -28,16 +39,12 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm_small" {
   }
 
   cpu {
-    cores        = 2
+    cores        = 3
     type         = "host"
   }
 
   memory {
     dedicated = 4096
-  }
-
-  cdrom {
-    file_id = "local:iso/ubuntu-26.04-live-server-amd64.iso"
   }
 
   disk {
@@ -52,4 +59,5 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm_small" {
     bridge = "vmbr0"
     model  = "virtio"
   }
+  
 }
