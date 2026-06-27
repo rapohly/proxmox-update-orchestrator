@@ -59,5 +59,4 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm_small" {
     bridge = "vmbr0"
     model  = "virtio"
   }
-  
 }
