@@ -1,0 +1,99 @@
+{
+    "nodes": [
+        {
+            "cpu": 0.317404456707962,
+            "iowait": 0.033534934025327395,
+            "maxcpu": 10,
+            "mem_total_bytes": 63197339648,
+            "mem_used_bytes": 5256310784,
+            "node": "pve-node-04",
+            "pressureiofull": 7.463522222222222,
+            "pressureiosome": 7.584486111111111
+        },
+        {
+            "cpu": 0.111924862303678,
+            "iowait": 0.03482178016180217,
+            "maxcpu": 10,
+            "mem_total_bytes": 63197347840,
+            "mem_used_bytes": 5111001088,
+            "node": "pve-node-03",
+            "pressureiofull": 7.673694444444442,
+            "pressureiosome": 7.885488888888891
+        },
+        {
+            "cpu": 0.509404730204072,
+            "iowait": 0.03724226823748691,
+            "maxcpu": 10,
+            "mem_total_bytes": 63197343744,
+            "mem_used_bytes": 6572851200,
+            "node": "pve-node-02",
+            "pressureiofull": 7.979291666666666,
+            "pressureiosome": 8.246347222222221
+        },
+        {
+            "cpu": 0.419232192913437,
+            "iowait": 0.01338492966641308,
+            "maxcpu": 10,
+            "mem_total_bytes": 63197339648,
+            "mem_used_bytes": 6599712768,
+            "node": "pve-node-01",
+            "pressureiofull": 3.0793444444444447,
+            "pressureiosome": 3.140972222222223
+        }
+    ],
+    "update_node": "pve-node-01",
+    "vms_to_evac": [
+        {
+            "cpu": 0,
+            "diskread": 0,
+            "diskwrite": 0,
+            "io_counter_bytes": 0,
+            "maxcpu": 2,
+            "mem_total_bytes": 4294967296,
+            "mem_used_bytes": 0,
+            "name": "ubuntu-vm-sm",
+            "node": "pve-node-01",
+            "status": "stopped",
+            "vmid": 101
+        },
+        {
+            "cpu": 0.999869388208766,
+            "diskread": 360618496,
+            "diskwrite": 9872384,
+            "io_counter_bytes": 370490880,
+            "maxcpu": 3,
+            "mem_total_bytes": 4294967296,
+            "mem_used_bytes": 1373822976,
+            "name": "test-vm-9",
+            "node": "pve-node-01",
+            "status": "running",
+            "vmid": 102
+        },
+        {
+            "cpu": 0.0102840415822259,
+            "diskread": 352856576,
+            "diskwrite": 9786368,
+            "io_counter_bytes": 362642944,
+            "maxcpu": 3,
+            "mem_total_bytes": 4294967296,
+            "mem_used_bytes": 1440673792,
+            "name": "test-vm-5",
+            "node": "pve-node-01",
+            "status": "running",
+            "vmid": 108
+        },
+        {
+            "cpu": 0.680573491731794,
+            "diskread": 352848384,
+            "diskwrite": 7287808,
+            "io_counter_bytes": 360136192,
+            "maxcpu": 3,
+            "mem_total_bytes": 4294967296,
+            "mem_used_bytes": 1372864512,
+            "name": "test-vm-1",
+            "node": "pve-node-01",
+            "status": "running",
+            "vmid": 109
+        }
+    ]
+}

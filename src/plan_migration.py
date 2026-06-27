@@ -142,7 +142,7 @@ def place_vms(vms: List[VM], nodes: List[Node]):
 
 if __name__ == "__main__":
 
-    with open("/opt/proxmox-automation/output/proxmox_inventory.json", "r") as f:
+    with open("/home/rpohly/projects/proxmox-update-orchestrator/output/proxmox_inventory.json", "r") as f:
         data = json.load(f)
 
     update_node = data["update_node"]

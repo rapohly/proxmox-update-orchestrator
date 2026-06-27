@@ -140,14 +140,14 @@
               'vms_to_evac': vm_metrics
             } | to_nice_json
           }}
-        dest: /opt/proxmox-automation/output/proxmox_inventory.json
+        dest: /home/rpohly/projects/proxmox-update-orchestrator/output/proxmox_inventory.json
         mode: '0600'
 
-    # - name: Run migration planner
-    #   ansible.builtin.command:
-    #     cmd: python3 /opt/proxmox-automation/plan_migration.py
-    #   register: migration_plan
+    - name: Run migration planner
+      ansible.builtin.command:
+        cmd: python3 /home/rpohly/projects/proxmox-update-orchestrator/src/plan_migration.py
+      register: migration_plan
 
-    # - name: Show planner output
-    #   ansible.builtin.debug:
-    #     var: migration_plan.stdout_lines
+    - name: Show planner output
+      ansible.builtin.debug:
+        var: migration_plan.stdout_lines
