@@ -1,0 +1,77 @@
+---
+- name: Execute Proxmox VM migration plan
+  hosts: api_host
+  gather_facts: false
+  connection: local
+
+  vars:
+    migration_plan_file: "/home/rpohly/projects/proxmox-update-orchestrator/output/migration_plan.json"
+
+  tasks:
+    - name: Load migration plan JSON
+      ansible.builtin.slurp:
+        src: "{{ migration_plan_file }}"
+      register: migration_plan_raw
+
+    - name: Parse migration plan JSON
+      ansible.builtin.set_fact:
+        migration_plan_data: "{{ migration_plan_raw.content | b64decode | from_json }}"
+
+    - name: Show migration plan summary
+      ansible.builtin.debug:
+        msg: "Evacuating {{ migration_plan_data.update_node }} with {{ migration_plan_data.migration_plan | length }} planned migrations"
+
+    - name: Start VM migrations from plan
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.source_node }}/qemu/{{ item.vmid }}/migrate"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          node: "{{ item.source_node }}"
+          target: "{{ item.destination_node }}"
+          vmid: "{{ item.vmid }}"
+          online: 1
+          with-local-disks: 1
+        validate_certs: false
+        status_code: 200
+        return_content: true
+      loop: "{{ migration_plan_data.migration_plan }}"
+      loop_control:
+        label: "{{ item.name }} / VMID {{ item.vmid }}"
+      register: migration_start_results
+
+    - name: Wait for migration tasks to finish
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.item.source_node }}/tasks/{{ item.json.data | urlencode }}/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        status_code: 200
+        return_content: true
+      loop: "{{ migration_start_results.results }}"
+      loop_control:
+        label: "{{ item.item.name }} / VMID {{ item.item.vmid }}"
+      register: migration_task_status
+      until: migration_task_status.json.data.status == "stopped"
+      retries: 720
+      delay: 10
+
+    - name: Fail if any migration failed
+      ansible.builtin.fail:
+        msg: "Migration failed for VM {{ item.item.item.vmid }}: {{ item.json.data }}"
+      loop: "{{ migration_task_status.results }}"
+      loop_control:
+        label: "{{ item.item.item.name }} / VMID {{ item.item.item.vmid }}"
+      when:
+        - item.json.data.exitstatus is defined
+        - item.json.data.exitstatus != "OK"
+
+    - name: Show completed migrations
+      ansible.builtin.debug:
+        msg: "Migration completed for VM {{ item.item.item.vmid }} to {{ item.item.item.destination_node }}"
+      loop: "{{ migration_task_status.results }}"
+      loop_control:
+        label: "{{ item.item.item.name }} / VMID {{ item.item.item.vmid }}"
