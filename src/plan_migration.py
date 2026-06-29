@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import sys
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -23,7 +24,9 @@ def bytes_to_gib(value):
 
 @dataclass
 class VM:
+    vmid: int
     name: str
+    source_node: str
     cpu: float   # CPU units
     ram: float   # GB
 
@@ -107,7 +110,7 @@ def vm_weight(vm: VM) -> float:
 # ---------------------------------------------------------------------
 
 def place_vms(vms: List[VM], nodes: List[Node]):
-    placements = {}
+    placements = []
 
     # Largest-first
     sorted_vms = sorted(vms, key=vm_weight, reverse=True)
@@ -121,7 +124,7 @@ def place_vms(vms: List[VM], nodes: List[Node]):
 
         if not candidates:
             raise RuntimeError(
-                f"No valid destination found for VM {vm.name}"
+                f"No valid destination found for VM {vm.id} ({vm.name})"
             )
 
         best_node = min(
@@ -130,19 +133,21 @@ def place_vms(vms: List[VM], nodes: List[Node]):
         )
 
         best_node.place_vm(vm)
-        placements[vm.name] = best_node.name
 
-        print(
-            f"{vm.name:12s} -> {best_node.name:8s} "
-            f"(projected score={best_node.score():.3f})"
-        )
+        placements.append({
+            "vmid": vm.vmid,
+            "name": vm.name,
+            "source_node": vm.source_node,
+            "destination_node": best_node.name
+        })
 
     return placements
 
-
 if __name__ == "__main__":
 
-    with open("/home/rpohly/projects/proxmox-update-orchestrator/output/proxmox_inventory.json", "r") as f:
+    inventory_path = "/home/rpohly/projects/proxmox-update-orchestrator/output/proxmox_inventory.json"
+
+    with open(inventory_path, "r") as f:
         data = json.load(f)
 
     update_node = data["update_node"]
@@ -163,7 +168,9 @@ if __name__ == "__main__":
 
     vms = [
         VM(
+            vmid=v["vmid"],
             name=v["name"],
+            source_node=v.get("node", update_node),
             cpu=v["cpu"] * v["maxcpu"],
             ram=bytes_to_gib(v["mem_used_bytes"]),
         )
@@ -171,18 +178,27 @@ if __name__ == "__main__":
         if v["status"] == "running"
     ]
 
-    placements = place_vms(vms, nodes)
+    try:
+        placements = place_vms(vms, nodes)
 
-    print(f"Update node: {update_node}")
+        output = {
+            "update_node": update_node,
+            "migration_plan": placements
+        }
 
-    print("\nDestination nodes:")
-    for node in nodes:
-        print(f"    {node.name}")
+        output_path = "/home/rpohly/projects/proxmox-update-orchestrator/output/migration_plan.json"
 
-    print("\nVMs to evacuate:")
-    for vm in vms:
-        print(f"    {vm.name}")
+        with open(output_path, "w") as f:
+            json.dump(output, f, indent=2)
 
-    print("\nFinal placement:")
-    for vm, node in placements.items():
-        print(f"{vm} -> {node}")
+        print(json.dumps(output, indent=2))
+
+    except RuntimeError as e:
+        error_output = {
+            "error": str(e),
+            "update_node": update_node,
+            "migration_plan": []
+        }
+
+        print(json.dumps(error_output, indent=2))
+        sys.exit(1)
