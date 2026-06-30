@@ -20,15 +20,14 @@ echo "Updating packages..."
 sudo $UPDATE
 
 echo "Installing dependencies..."
-sudo $INSTALL python3 python3-venv python3-pip ansible git sshpass
-sudo $INSTALL ansible-core
+sudo $INSTALL python3 git sshpass ansible-core
 
 #echo "Setting up venv..."
 #python3 -m venv .venv
 #source .venv/bin/activate
 
-echo "Installing Python deps..."
-pip install --upgrade pip
-pip install -r requirements.txt
+# echo "Installing Python deps..."
+# pip install --upgrade pip
+# pip install -r requirements.txt
 
 echo "Done."
