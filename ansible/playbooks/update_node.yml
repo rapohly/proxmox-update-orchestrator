@@ -1,0 +1,63 @@
+---
+- name: Load migration plan and create dynamic update target
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars:
+    migration_plan_file: "/home/rpohly/projects/proxmox-update-orchestrator/output/migration_plan.json"
+
+  tasks:
+    - name: Load migration plan
+      ansible.builtin.slurp:
+        src: "{{ migration_plan_file }}"
+      register: migration_plan_raw
+
+    - name: Parse migration plan
+      ansible.builtin.set_fact:
+        migration_plan: "{{ migration_plan_raw.content | b64decode | from_json }}"
+
+    - name: Add update node as dynamic target
+      ansible.builtin.add_host:
+        name: "{{ migration_plan.update_node }}"
+        groups: update_node_target
+        ansible_host: "{{ hostvars[migration_plan.update_node].ansible_host }}"
+        ansible_user: root
+        ansible_ssh_private_key_file: /home/rpohly/projects/proxmox-update-orchestrator/.ssh/id_ed25519
+        ansible_become: false
+
+- name: Update evacuated Proxmox node
+  hosts: update_node_target
+  gather_facts: false
+  become: false
+
+  tasks:
+    - name: Confirm SSH user
+      ansible.builtin.command: whoami
+      register: whoami_result
+      changed_when: false
+
+    - name: Show SSH user
+      ansible.builtin.debug:
+        var: whoami_result.stdout
+
+    - name: Update apt package index
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Upgrade installed packages
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: true
+        autoclean: true
+
+    - name: Reboot node
+      ansible.builtin.reboot:
+        reboot_timeout: 1800
+        connect_timeout: 10
+        post_reboot_delay: 15
+        test_command: uptime
+
+    - name: Verify node is reachable
+      ansible.builtin.ping:

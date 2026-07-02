@@ -1,5 +1,5 @@
 ---
-- name: Execute Proxmox VM migration plan
+- name: Execute Proxmox VM back-migration plan
   hosts: api_host
   gather_facts: false
   connection: local
@@ -17,20 +17,20 @@
       ansible.builtin.set_fact:
         migration_plan_data: "{{ migration_plan_raw.content | b64decode | from_json }}"
 
-    - name: Show migration plan summary
+    - name: Show back-migration summary
       ansible.builtin.debug:
-        msg: "Evacuating {{ migration_plan_data.update_node }} with {{ migration_plan_data.migration_plan | length }} planned migrations"
+        msg: "Migrating {{ migration_plan_data.migration_plan | length }} VMs back to {{ migration_plan_data.update_node }}"
 
-    - name: Start VM migrations from plan
+    - name: Start VM back-migrations
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.source_node }}/qemu/{{ item.vmid }}/migrate"
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.destination_node }}/qemu/{{ item.vmid }}/migrate"
         method: POST
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
         body_format: form-urlencoded
         body:
-          node: "{{ item.source_node }}"
-          target: "{{ item.destination_node }}"
+          node: "{{ item.destination_node }}"
+          target: "{{ item.source_node }}"
           vmid: "{{ item.vmid }}"
           online: 1
           with-local-disks: 1
@@ -40,9 +40,9 @@
       loop: "{{ migration_plan_data.migration_plan }}"
       loop_control:
         label: "{{ item.name }} / VMID {{ item.vmid }}"
-      register: migration_start_results
+      register: back_migration_start_results
 
-    - name: Wait for update node to be evacuated
+    - name: Wait for VMs to return to original node
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ migration_plan_data.update_node }}/qemu"
         method: GET
@@ -51,27 +51,27 @@
         validate_certs: false
         status_code: 200
         return_content: true
-      register: remaining_vms
+      register: returned_vms
       vars:
         planned_vmids: "{{ migration_plan_data.migration_plan | map(attribute='vmid') | list }}"
-        remaining_planned_vmids: >-
+        returned_planned_vmids: >-
           {{
-            remaining_vms.json.data
+            returned_vms.json.data
             | map(attribute='vmid')
             | select('in', planned_vmids)
             | list
           }}
-      until: remaining_planned_vmids | length == 0
+      until: returned_planned_vmids | length == planned_vmids | length
       retries: 2880
       delay: 10
 
-    - name: Show evacuation completed
+    - name: Show back-migration completed
       ansible.builtin.debug:
-        msg: "Evacuation completed for node {{ migration_plan_data.update_node }}"
+        msg: "Back-migration completed. Planned VMs are back on {{ migration_plan_data.update_node }}"
 
-    - name: Show completed planned migrations
+    - name: Show completed back-migrations
       ansible.builtin.debug:
-        msg: "VM {{ item.vmid }} migrated from {{ item.source_node }} to {{ item.destination_node }}"
+        msg: "VM {{ item.vmid }} migrated back from {{ item.destination_node }} to {{ item.source_node }}"
       loop: "{{ migration_plan_data.migration_plan }}"
       loop_control:
         label: "{{ item.name }} / VMID {{ item.vmid }}"
