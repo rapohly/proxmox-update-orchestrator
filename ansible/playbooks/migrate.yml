@@ -37,6 +37,7 @@
         validate_certs: false
         status_code: 200
         return_content: true
+      throttle: 4
       loop: "{{ migration_plan_data.migration_plan }}"
       loop_control:
         label: "{{ item.name }} / VMID {{ item.vmid }}"
