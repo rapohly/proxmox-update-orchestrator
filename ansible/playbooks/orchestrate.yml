@@ -1,0 +1,5 @@
+---
+- import_playbook: collect_inventory.yml                 
+- import_playbook: migrate.yml
+- import_playbook: update_node.yml
+- import_playbook: back_migrate.yml

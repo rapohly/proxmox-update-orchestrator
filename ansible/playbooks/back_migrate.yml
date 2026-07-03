@@ -49,22 +49,28 @@
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
         validate_certs: false
-        status_code: 200
         return_content: true
+        status_code: 200
       register: returned_vms
-      vars:
-        planned_vmids: "{{ migration_plan_data.migration_plan | map(attribute='vmid') | list }}"
-        returned_planned_vmids: >-
-          {{
-            returned_vms.json.data
-            | map(attribute='vmid')
-            | select('in', planned_vmids)
-            | list
-          }}
-      until: returned_planned_vmids | length == planned_vmids | length
       retries: 2880
       delay: 10
 
+      vars:
+        planned_vmids: "{{ migration_plan_data.migration_plan | map(attribute='vmid') | list }}"
+
+      until: >-
+        {{
+          (
+            (
+              returned_vms.json | default({}) | dict2items | items2dict
+            ).data | default([])
+            | map(attribute='vmid')
+            | select('in', planned_vmids)
+            | list
+            | length
+          )
+          == (planned_vmids | length)
+        }}
     - name: Show back-migration completed
       ansible.builtin.debug:
         msg: "Back-migration completed. Planned VMs are back on {{ migration_plan_data.update_node }}"
