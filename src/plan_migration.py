@@ -23,12 +23,13 @@ def bytes_to_gib(value):
 # ---------------------------------------------------------------------
 
 @dataclass
-class VM:
+class Workload:
     vmid: int
     name: str
+    workload_type: str  # "vm" or "ct"
     source_node: str
-    cpu: float   # CPU units
-    ram: float   # GB
+    cpu: float
+    ram: float
 
 @dataclass
 class Node:
@@ -60,84 +61,69 @@ class Node:
             + RAM_WEIGHT * ram_util
         )
 
-    def can_fit(self, vm: VM) -> bool:
-        """
-        Check thresholds after placement.
-        """
-
-        cpu_util = (self.cpu_used + vm.cpu) / self.cpu_capacity
-        ram_util = (self.ram_used + vm.ram) / self.ram_capacity
+    def can_fit(self, workload: Workload) -> bool:
+        cpu_util = (self.cpu_used + workload.cpu) / self.cpu_capacity
+        ram_util = (self.ram_used + workload.ram) / self.ram_capacity
 
         return (
             cpu_util <= MAX_CPU_UTIL
             and ram_util <= MAX_RAM_UTIL
         )
 
-    def projected_score(self, vm: VM) -> float:
-        """
-        Score after placing VM on this node.
-        """
-
+    def projected_score(self, workload: Workload) -> float:
         return self.score(
-            cpu_used=self.cpu_used + vm.cpu,
-            ram_used=self.ram_used + vm.ram,
-        )
+            cpu_used=self.cpu_used + workload.cpu,
+            ram_used=self.ram_used + workload.ram,
+    )
 
-    def place_vm(self, vm: VM):
-        self.cpu_used += vm.cpu
-        self.ram_used += vm.ram
+    def place_workload(self, workload: Workload):
+        self.cpu_used += workload.cpu
+        self.ram_used += workload.ram
 
 
 # ---------------------------------------------------------------------
 # VM SORTING
 # ---------------------------------------------------------------------
 
-def vm_weight(vm: VM) -> float:
-    """
-    Weight used for largest-first ordering.
-
-    Normalized so CPU, RAM contribute proportionally.
-    """
-
+def workload_weight(workload: Workload) -> float:
     return (
-        CPU_WEIGHT * vm.cpu
-        + RAM_WEIGHT * vm.ram
+        CPU_WEIGHT * workload.cpu
+        + RAM_WEIGHT * workload.ram
     )
-
 
 # ---------------------------------------------------------------------
 # GREEDY PLACEMENT
 # ---------------------------------------------------------------------
 
-def place_vms(vms: List[VM], nodes: List[Node]):
+def place_workloads(workloads: List[Workload], nodes: List[Node]):
     placements = []
 
-    # Largest-first
-    sorted_vms = sorted(vms, key=vm_weight, reverse=True)
+    sorted_workloads = sorted(workloads, key=workload_weight, reverse=True)
 
-    for vm in sorted_vms:
-
+    for workload in sorted_workloads:
         candidates = [
             node for node in nodes
-            if node.can_fit(vm)
+            if node.can_fit(workload)
         ]
 
         if not candidates:
             raise RuntimeError(
-                f"No valid destination found for VM {vm.id} ({vm.name})"
+                f"No valid destination found for {workload.workload_type} "
+                f"{workload.vmid} ({workload.name})"
             )
 
         best_node = min(
             candidates,
-            key=lambda n: n.projected_score(vm)
+            key=lambda n: n.projected_score(workload)
         )
 
-        best_node.place_vm(vm)
+        best_node.place_workload(workload)
 
         placements.append({
-            "vmid": vm.vmid,
-            "name": vm.name,
-            "source_node": vm.source_node,
+            "type": workload.workload_type,
+            "vmid": workload.vmid,
+            "name": workload.name,
+            "source_node": workload.source_node,
             "destination_node": best_node.name
         })
 
@@ -166,20 +152,36 @@ if __name__ == "__main__":
         if n["node"] != update_node
     ]
 
-    vms = [
-        VM(
-            vmid=v["vmid"],
-            name=v["name"],
-            source_node=v.get("node", update_node),
-            cpu=v["cpu"] * v["maxcpu"],
-            ram=bytes_to_gib(v["mem_used_bytes"]),
+    workloads = []
+
+for v in data["vms_to_evac"]:
+    if v["status"] == "running":
+        workloads.append(
+            Workload(
+                vmid=v["vmid"],
+                name=v["name"],
+                workload_type="vm",
+                source_node=v.get("node", update_node),
+                cpu=v["cpu"] * v["maxcpu"],
+                ram=bytes_to_gib(v["mem_used_bytes"]),
+            )
         )
-        for v in data["vms_to_evac"]
-        if v["status"] == "running"
-    ]
+
+for c in data["cts_to_evac"]:
+    if c["status"] == "running":
+        workloads.append(
+            Workload(
+                vmid=c["vmid"],
+                name=c["name"],
+                workload_type="ct",
+                source_node=c.get("node", update_node),
+                cpu=c["cpu"] * c["maxcpu"],
+                ram=bytes_to_gib(c["mem_used_bytes"]),
+            )
+        )
 
     try:
-        placements = place_vms(vms, nodes)
+        placements = place_workloads(workloads, nodes)
 
         output = {
             "update_node": update_node,

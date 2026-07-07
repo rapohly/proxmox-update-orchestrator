@@ -1,5 +1,5 @@
 ---
-- name: Execute Proxmox VM back-migration plan
+- name: Execute Proxmox workload back-migration plan
   hosts: api_host
   gather_facts: false
   connection: local
@@ -19,65 +19,77 @@
 
     - name: Show back-migration summary
       ansible.builtin.debug:
-        msg: "Migrating {{ migration_plan_data.migration_plan | length }} VMs back to {{ migration_plan_data.update_node }}"
+        msg: "Migrating {{ migration_plan_data.migration_plan | length }} workloads back to {{ migration_plan_data.update_node }}"
 
-    - name: Start VM back-migrations
+    - name: Wait for Proxmox API to be available
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 8006
+        timeout: 600
+        delay: 10
+      delegate_to: localhost
+
+    - name: Start workload back-migrations
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.destination_node }}/qemu/{{ item.vmid }}/migrate"
+        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.destination_node }}/{{ 'qemu' if item.type == 'vm' else 'lxc' }}/{{ item.vmid }}/migrate"
         method: POST
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
         body_format: form-urlencoded
-        body:
-          node: "{{ item.destination_node }}"
-          target: "{{ item.source_node }}"
-          vmid: "{{ item.vmid }}"
-          online: 1
-          with-local-disks: 1
+        body: >-
+          {{
+            {
+              'node': item.destination_node,
+              'target': item.source_node,
+              'vmid': item.vmid
+            }
+            | combine(
+                {'online': 1, 'with-local-disks': 1}
+                if item.type == 'vm'
+                else {'restart': 1}
+              )
+          }}
         validate_certs: false
         status_code: 200
         return_content: true
+      throttle: 4
       loop: "{{ migration_plan_data.migration_plan }}"
       loop_control:
-        label: "{{ item.name }} / VMID {{ item.vmid }}"
+        label: "{{ item.type | upper }} {{ item.name }} / VMID {{ item.vmid }}"
       register: back_migration_start_results
 
-    - name: Wait for VMs to return to original node
+    - name: Wait for workloads to return to original node
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ migration_plan_data.update_node }}/qemu"
+        url: "https://{{ ansible_host }}:8006/api2/json/cluster/resources?type=vm"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
         validate_certs: false
-        return_content: true
         status_code: 200
-      register: returned_vms
+        return_content: true
+      register: cluster_resources
+      vars:
+        planned_ids: "{{ migration_plan_data.migration_plan | map(attribute='vmid') | map('string') | list }}"
+        returned_planned_ids: >-
+          {{
+            cluster_resources.json.data
+            | selectattr('node', 'equalto', migration_plan_data.update_node)
+            | map(attribute='vmid')
+            | map('string')
+            | select('in', planned_ids)
+            | list
+          }}
+      until: returned_planned_ids | length == planned_ids | length
       retries: 2880
       delay: 10
 
-      vars:
-        planned_vmids: "{{ migration_plan_data.migration_plan | map(attribute='vmid') | list }}"
-
-      until: >-
-        {{
-          (
-            (
-              returned_vms.json | default({}) | dict2items | items2dict
-            ).data | default([])
-            | map(attribute='vmid')
-            | select('in', planned_vmids)
-            | list
-            | length
-          )
-          == (planned_vmids | length)
-        }}
     - name: Show back-migration completed
       ansible.builtin.debug:
-        msg: "Back-migration completed. Planned VMs are back on {{ migration_plan_data.update_node }}"
+        msg: "Back-migration completed. Planned workloads are back on {{ migration_plan_data.update_node }}"
 
     - name: Show completed back-migrations
       ansible.builtin.debug:
-        msg: "VM {{ item.vmid }} migrated back from {{ item.destination_node }} to {{ item.source_node }}"
+        msg: "{{ item.type | upper }} {{ item.vmid }} migrated back from {{ item.destination_node }} to {{ item.source_node }}"
       loop: "{{ migration_plan_data.migration_plan }}"
       loop_control:
-        label: "{{ item.name }} / VMID {{ item.vmid }}"
+        label: "{{ item.type | upper }} {{ item.name }} / VMID {{ item.vmid }}"
