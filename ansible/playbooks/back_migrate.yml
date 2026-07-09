@@ -29,34 +29,17 @@
         delay: 10
       delegate_to: localhost
 
-    - name: Start workload back-migrations
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.destination_node }}/{{ 'qemu' if item.type == 'vm' else 'lxc' }}/{{ item.vmid }}/migrate"
-        method: POST
-        headers:
-          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
-        body_format: form-urlencoded
-        body: >-
-          {{
-            {
-              'node': item.destination_node,
-              'target': item.source_node,
-              'vmid': item.vmid
-            }
-            | combine(
-                {'online': 1, 'with-local-disks': 1}
-                if item.type == 'vm'
-                else {'restart': 1}
-              )
-          }}
-        validate_certs: false
-        status_code: 200
-        return_content: true
-      throttle: 4
-      loop: "{{ migration_plan_data.migration_plan }}"
+    - name: Build back-migration batches
+      ansible.builtin.set_fact:
+        migration_batches: "{{ migration_plan_data.migration_plan | batch(4) | list }}"
+
+    - name: Run workload back-migration batches
+      ansible.builtin.include_tasks: migrate_batch.yml
+      vars:
+        reverse: true
+      loop: "{{ migration_batches }}"
       loop_control:
-        label: "{{ item.type | upper }} {{ item.name }} / VMID {{ item.vmid }}"
-      register: back_migration_start_results
+        loop_var: migration_batch
 
     - name: Wait for workloads to return to original node
       ansible.builtin.uri:

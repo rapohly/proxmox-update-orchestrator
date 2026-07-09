@@ -1,0 +1,49 @@
+---
+- name: Start workload migrations in this batch
+  ansible.builtin.uri:
+    url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.destination_node if reverse else item.source_node }}/{{ 'qemu' if item.type == 'vm' else 'lxc' }}/{{ item.vmid }}/migrate"
+    method: POST
+    headers:
+      Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+    body_format: form-urlencoded
+    body: >-
+      {{
+        {
+          'target': item.source_node if reverse else item.destination_node
+        }
+        | combine(
+            {'online': 1, 'with-local-disks': 1}
+            if item.type == 'vm'
+            else {'restart': 1}
+          )
+      }}
+    validate_certs: false
+    status_code: 200
+    return_content: true
+  loop: "{{ migration_batch }}"
+  loop_control:
+    label: "{{ item.type | upper }} {{ item.name }} / VMID {{ item.vmid }}"
+  register: batch_start_results
+
+- name: Wait for Proxmox migration tasks in this batch to finish
+  ansible.builtin.uri:
+    url: >-
+      https://{{ ansible_host }}:8006/api2/json/nodes/{{
+        item.json.data.split(':')[1]
+      }}/tasks/{{ item.json.data | urlencode }}/status
+    method: GET
+    headers:
+      Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+    validate_certs: false
+    status_code: 200
+    return_content: true
+  loop: "{{ batch_start_results.results }}"
+  loop_control:
+    label: "{{ item.item.type | upper }} {{ item.item.name }} / VMID {{ item.item.vmid }}"
+  register: batch_task_status
+  until:
+    - batch_task_status.json.data is defined
+    - batch_task_status.json.data.status is defined
+    - batch_task_status.json.data.status == "stopped"
+  retries: 2880
+  delay: 10
