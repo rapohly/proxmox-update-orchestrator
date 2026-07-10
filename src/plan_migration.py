@@ -131,9 +131,12 @@ def place_workloads(workloads: List[Workload], nodes: List[Node]):
 
 if __name__ == "__main__":
 
-    inventory_path = "/home/rpohly/projects/proxmox-update-orchestrator/output/proxmox_inventory.json"
+    inventory_path = (
+        "/home/rpohly/projects/proxmox-update-orchestrator/"
+        "output/proxmox_inventory.json"
+    )
 
-    with open(inventory_path, "r") as f:
+    with open(inventory_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     update_node = data["update_node"]
@@ -143,10 +146,8 @@ if __name__ == "__main__":
             name=n["node"],
             cpu_capacity=n["maxcpu"],
             ram_capacity=bytes_to_gib(n["mem_total_bytes"]),
-            # io_capacity=n["io_capacity"],
             cpu_used=n["cpu"] * n["maxcpu"],
             ram_used=bytes_to_gib(n["mem_used_bytes"]),
-            # io_used=n["io_used"],
         )
         for n in data["nodes"]
         if n["node"] != update_node
@@ -154,43 +155,46 @@ if __name__ == "__main__":
 
     workloads = []
 
-for v in data["vms_to_evac"]:
-    if v["status"] == "running":
-        workloads.append(
-            Workload(
-                vmid=v["vmid"],
-                name=v["name"],
-                workload_type="vm",
-                source_node=v.get("node", update_node),
-                cpu=v["cpu"] * v["maxcpu"],
-                ram=bytes_to_gib(v["mem_used_bytes"]),
+    for v in data["vms_to_evac"]:
+        if v["status"] == "running":
+            workloads.append(
+                Workload(
+                    vmid=v["vmid"],
+                    name=v["name"],
+                    workload_type="vm",
+                    source_node=v.get("node", update_node),
+                    cpu=v["cpu"] * v["maxcpu"],
+                    ram=bytes_to_gib(v["mem_used_bytes"]),
+                )
             )
-        )
 
-for c in data["cts_to_evac"]:
-    if c["status"] == "running":
-        workloads.append(
-            Workload(
-                vmid=c["vmid"],
-                name=c["name"],
-                workload_type="ct",
-                source_node=c.get("node", update_node),
-                cpu=c["cpu"] * c["maxcpu"],
-                ram=bytes_to_gib(c["mem_used_bytes"]),
+    for c in data["cts_to_evac"]:
+        if c["status"] == "running":
+            workloads.append(
+                Workload(
+                    vmid=c["vmid"],
+                    name=c["name"],
+                    workload_type="ct",
+                    source_node=c.get("node", update_node),
+                    cpu=c["cpu"] * c["maxcpu"],
+                    ram=bytes_to_gib(c["mem_used_bytes"]),
+                )
             )
-        )
 
     try:
         placements = place_workloads(workloads, nodes)
 
         output = {
             "update_node": update_node,
-            "migration_plan": placements
+            "migration_plan": placements,
         }
 
-        output_path = "/home/rpohly/projects/proxmox-update-orchestrator/output/migration_plan.json"
+        output_path = (
+            "/home/rpohly/projects/proxmox-update-orchestrator/"
+            "output/migration_plan.json"
+        )
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(output, f, indent=2)
 
         print(json.dumps(output, indent=2))
@@ -199,7 +203,7 @@ for c in data["cts_to_evac"]:
         error_output = {
             "error": str(e),
             "update_node": update_node,
-            "migration_plan": []
+            "migration_plan": [],
         }
 
         print(json.dumps(error_output, indent=2))

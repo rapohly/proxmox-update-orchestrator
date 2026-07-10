@@ -192,7 +192,8 @@
 
     - name: Run migration planner
       ansible.builtin.command:
-        cmd: python3 /home/rpohly/projects/proxmox-update-orchestrator/src/plan_migration.py
+        cmd: python3 src/plan_migration.py
+        chdir: "{{ playbook_dir | dirname | dirname }}"
       register: migration_plan
 
     - name: Show planner output
