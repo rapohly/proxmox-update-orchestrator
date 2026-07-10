@@ -1,2 +1,5 @@
-use bulk migrate with max-workers
+get rid of hard-coded paths
+add json reset on each run
+add output logging
 add check for start at boot yes
+create installation steps
