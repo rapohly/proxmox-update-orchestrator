@@ -3,3 +3,5 @@ add json reset on each run
 add output logging
 add check for start at boot yes
 create installation steps
+fail out immediately if not cluster
+build python CLI wrapper
