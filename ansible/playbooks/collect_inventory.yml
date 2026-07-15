@@ -192,7 +192,10 @@
 
     - name: Run migration planner
       ansible.builtin.command:
-        cmd: python3 src/plan_migration.py
+        argv:
+          - python3
+          - src/plan_migration.py
+          - runstate/proxmox_inventory.json
         chdir: "{{ playbook_dir | dirname | dirname }}"
       register: migration_plan
 

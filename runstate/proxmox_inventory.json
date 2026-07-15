@@ -2,44 +2,44 @@
     "cts_to_evac": [],
     "nodes": [
         {
-            "cpu": 0.312335782276488,
-            "iowait": 0.0005132965600424991,
+            "cpu": 0.466412494970182,
+            "iowait": 0.0026611756523432432,
             "maxcpu": 10,
             "mem_total_bytes": 63197294592,
-            "mem_used_bytes": 7566884864,
+            "mem_used_bytes": 7632326656,
             "node": "pve-node-02",
-            "pressureiofull": 0.05897222222222223,
-            "pressureiosome": 0.06233333333333326
-        },
-        {
-            "cpu": 0.265182724173311,
-            "iowait": 0.0005470631816867616,
-            "maxcpu": 10,
-            "mem_total_bytes": 63197294592,
-            "mem_used_bytes": 7993593856,
-            "node": "pve-node-01",
-            "pressureiofull": 0.197088888888889,
-            "pressureiosome": 0.1990055555555555
+            "pressureiofull": 0.31636111111111054,
+            "pressureiosome": 0.3344722222222217
         },
         {
             "cpu": 0,
-            "iowait": 0.004539317377379036,
-            "maxcpu": 10,
-            "mem_total_bytes": 63197302784,
-            "mem_used_bytes": 5699665920,
-            "node": "pve-node-04",
-            "pressureiofull": 0.8960416666666666,
-            "pressureiosome": 0.9084166666666661
-        },
-        {
-            "cpu": 0.399795375208428,
-            "iowait": 0.0040915613938309215,
+            "iowait": 0.00036016426368989246,
             "maxcpu": 10,
             "mem_total_bytes": 63197294592,
-            "mem_used_bytes": 6253948928,
+            "mem_used_bytes": 7983001600,
+            "node": "pve-node-01",
+            "pressureiofull": 0.03136111111111117,
+            "pressureiosome": 0.03172222222222228
+        },
+        {
+            "cpu": 0,
+            "iowait": 0.0036948557316175807,
+            "maxcpu": 10,
+            "mem_total_bytes": 63197298688,
+            "mem_used_bytes": 5683322880,
+            "node": "pve-node-04",
+            "pressureiofull": 0.6789277777777778,
+            "pressureiosome": 0.693124999999999
+        },
+        {
+            "cpu": 0.220514941540233,
+            "iowait": 0.0025901015988315144,
+            "maxcpu": 10,
+            "mem_total_bytes": 63197294592,
+            "mem_used_bytes": 6261817344,
             "node": "pve-node-03",
-            "pressureiofull": 0.5329888888888888,
-            "pressureiosome": 0.5714944444444445
+            "pressureiofull": 0.26138888888888956,
+            "pressureiosome": 0.2643611111111117
         }
     ],
     "update_node": "pve-node-04",
@@ -64,20 +64,20 @@
             "io_counter_bytes": 0,
             "maxcpu": 3,
             "mem_total_bytes": 4294967296,
-            "mem_used_bytes": 1803296768,
+            "mem_used_bytes": 1692184576,
             "name": "test-vm-4",
             "node": "pve-node-04",
             "status": "running",
             "vmid": 110
         },
         {
-            "cpu": 0,
+            "cpu": 0.00934968242585497,
             "diskread": 0,
             "diskwrite": 0,
             "io_counter_bytes": 0,
             "maxcpu": 3,
             "mem_total_bytes": 4294967296,
-            "mem_used_bytes": 1709064192,
+            "mem_used_bytes": 1790939136,
             "name": "test-vm-8",
             "node": "pve-node-04",
             "status": "running",

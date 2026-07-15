@@ -22,8 +22,6 @@
         name: "{{ migration_plan.update_node }}"
         groups: update_node_target
         ansible_host: "{{ hostvars[migration_plan.update_node].ansible_host }}"
-        ansible_user: root
-        ansible_ssh_private_key_file: /home/rpohly/projects/proxmox-update-orchestrator/.ssh/id_ed25519
         ansible_become: false
 
 - name: Update evacuated Proxmox node

@@ -3,6 +3,7 @@
 import json
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Optional
 
 # ---------------------------------------------------------------------
@@ -131,10 +132,11 @@ def place_workloads(workloads: List[Workload], nodes: List[Node]):
 
 if __name__ == "__main__":
 
-    inventory_path = (
-        "/home/rpohly/projects/proxmox-update-orchestrator/"
-        "runstate/proxmox_inventory.json"
-    )
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <inventory_json>", file=sys.stderr)
+        sys.exit(1)
+
+    inventory_path = sys.argv[1]
 
     with open(inventory_path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -189,10 +191,7 @@ if __name__ == "__main__":
             "migration_plan": placements,
         }
 
-        output_path = (
-            "/home/rpohly/projects/proxmox-update-orchestrator/"
-            "runstate/migration_plan.json"
-        )
+        output_path = Path(inventory_path).parent / "migration_plan.json"
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(output, f, indent=2)
