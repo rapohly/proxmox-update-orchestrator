@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     inventory_path = (
         "/home/rpohly/projects/proxmox-update-orchestrator/"
-        "output/proxmox_inventory.json"
+        "runstate/proxmox_inventory.json"
     )
 
     with open(inventory_path, "r", encoding="utf-8") as f:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
         output_path = (
             "/home/rpohly/projects/proxmox-update-orchestrator/"
-            "output/migration_plan.json"
+            "runstate/migration_plan.json"
         )
 
         with open(output_path, "w", encoding="utf-8") as f:

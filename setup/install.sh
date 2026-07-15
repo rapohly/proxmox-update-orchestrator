@@ -20,7 +20,7 @@ echo "Updating packages..."
 sudo $UPDATE
 
 echo "Installing dependencies..."
-sudo $INSTALL python3 git sshpass ansible-core
+sudo $INSTALL python3 ansible-core
 
 #echo "Setting up venv..."
 #python3 -m venv .venv

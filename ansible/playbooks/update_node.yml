@@ -5,7 +5,7 @@
   connection: local
 
   vars:
-    migration_plan_file: "/home/rpohly/projects/proxmox-update-orchestrator/output/migration_plan.json"
+    migration_plan_file: "{{ playbook_dir | dirname | dirname }}/runstate/migration_plan.json"
 
   tasks:
     - name: Load migration plan

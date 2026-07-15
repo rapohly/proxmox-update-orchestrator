@@ -2,8 +2,10 @@ INSTALLATION
 
 1. Git clone the repository into /opt directory
 2. Run install.sh (maybe install.sh should create the necessary directories below)
+Set up /etc/hosts
 3. Configure API token in Proxmox with necessary permissions
 4. Create inventories/inventory.ini
 5. Create inventories/group_vars/all/ directory
+Create ansible.cfg
 6. Run ansible-vault to securely store token secret from step 3, creating vault.yml under directory in step 5
-7. Create
+7. Configure Ansible ssh

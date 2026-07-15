@@ -1,6 +1,6 @@
 ---
 - name: Query Proxmox nodes
-  hosts: api_host
+  hosts: "{{ target_cluster }}_api_host"
   gather_facts: false
   connection: local
 
@@ -187,7 +187,7 @@
               'cts_to_evac': ct_metrics
             } | to_nice_json
           }}
-        dest: /home/rpohly/projects/proxmox-update-orchestrator/output/proxmox_inventory.json
+        dest: "{{ playbook_dir | dirname | dirname }}/runstate/proxmox_inventory.json"
         mode: '0600'
 
     - name: Run migration planner

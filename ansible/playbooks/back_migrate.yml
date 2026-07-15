@@ -1,11 +1,11 @@
 ---
 - name: Execute Proxmox workload back-migration plan
-  hosts: api_host
+  hosts: "{{ target_cluster }}_api_host"
   gather_facts: false
   connection: local
 
   vars:
-    migration_plan_file: "/home/rpohly/projects/proxmox-update-orchestrator/output/migration_plan.json"
+    migration_plan_file: "{{ playbook_dir | dirname | dirname }}/runstate/migration_plan.json"
 
   tasks:
     - name: Load migration plan JSON
