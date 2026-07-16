@@ -25,13 +25,9 @@ sudo $UPDATE
 echo "Installing dependencies..."
 sudo $INSTALL python3 ansible-core
 
-echo "Setting up Ansible directories..."
-mkdir -p "$PROJECT_ROOT/ansible/inventories/group_vars/all"
+if [[ ! -f "$PROJECT_ROOT/src/init.py" ]]; then
+    echo "Error: parse_remotes.py not found."
+    exit 1
+fi
 
-echo "Configuring Ansible vault..."
-ansible-vault create "$PROJECT_ROOT/ansible/inventories/group_vars/all/vault.yml"
-
-echo "Configuring runtime directory..."
-mkdir "$PROJECT_ROOT/runstate"
-
-echo "Done."
+python3 "$PROJECT_ROOT/src/init.py"
