@@ -22,12 +22,10 @@ sudo $UPDATE
 echo "Installing dependencies..."
 sudo $INSTALL python3 ansible-core
 
-#echo "Setting up venv..."
-#python3 -m venv .venv
-#source .venv/bin/activate
+echo "Setting up Ansible directories..."
+mkdir -p ../ansible/inventories/group_vars/all
 
-# echo "Installing Python deps..."
-# pip install --upgrade pip
-# pip install -r requirements.txt
+echo "Configuring Ansible vault..."
+ansible-vault create ../ansible/inventories/group_vars/all/vault.yml
 
 echo "Done."
