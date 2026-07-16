@@ -21,7 +21,6 @@
       ansible.builtin.add_host:
         name: "{{ migration_plan.update_node }}"
         groups: update_node_target
-        ansible_host: "{{ hostvars[migration_plan.update_node].ansible_host }}"
         ansible_become: false
 
 - name: Update evacuated Proxmox node

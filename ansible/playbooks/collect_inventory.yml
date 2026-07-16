@@ -1,13 +1,13 @@
 ---
 - name: Query Proxmox nodes
-  hosts: "{{ target_cluster }}_api_host"
+  hosts: "{{ groups[target_cluster] | first }}"
   gather_facts: false
   connection: local
 
   tasks:
     - name: Get node list
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes"
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -34,7 +34,7 @@
 
     - name: Get CPU info for each node
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.node }}/status"
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ item.node }}/status"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -45,7 +45,7 @@
 
     - name: Get node RRD metrics
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.node }}/rrddata?timeframe=hour"
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ item.node }}/rrddata?timeframe=hour"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -86,7 +86,7 @@
 
     - name: Collect VM list from update_node
       ansible.builtin.uri:
-        url:  "https://{{ ansible_host }}:8006/api2/json/nodes/{{ update_node }}/qemu"
+        url:  "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -96,7 +96,7 @@
 
     - name: Collect VM metrics
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/status/current"
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/status/current"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -132,7 +132,7 @@
 
     - name: Collect CT list from update_node
       ansible.builtin.uri:
-        url:  "https://{{ ansible_host }}:8006/api2/json/nodes/{{ update_node }}/lxc"
+        url:  "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -142,7 +142,7 @@
 
     - name: Collect CT metrics
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ update_node }}/lxc/{{ item.vmid }}/status/current"
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc/{{ item.vmid }}/status/current"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"

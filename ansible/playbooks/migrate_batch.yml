@@ -1,7 +1,7 @@
 ---
 - name: Start workload migrations in this batch
   ansible.builtin.uri:
-    url: "https://{{ ansible_host }}:8006/api2/json/nodes/{{ item.destination_node if reverse else item.source_node }}/{{ 'qemu' if item.type == 'vm' else 'lxc' }}/{{ item.vmid }}/migrate"
+    url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ item.destination_node if reverse else item.source_node }}/{{ 'qemu' if item.type == 'vm' else 'lxc' }}/{{ item.vmid }}/migrate"
     method: POST
     headers:
       Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
@@ -28,7 +28,7 @@
 - name: Wait for Proxmox migration tasks in this batch to finish
   ansible.builtin.uri:
     url: >-
-      https://{{ ansible_host }}:8006/api2/json/nodes/{{
+      https://{{ inventory_hostname }}:8006/api2/json/nodes/{{
         item.json.data.split(':')[1]
       }}/tasks/{{ item.json.data | urlencode }}/status
     method: GET

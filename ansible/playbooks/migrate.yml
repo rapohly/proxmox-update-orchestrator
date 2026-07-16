@@ -1,6 +1,6 @@
 ---
 - name: Execute Proxmox workload migration plan
-  hosts: "{{ target_cluster }}_api_host"
+  hosts: "{{ groups[target_cluster] | first }}"
   gather_facts: false
   connection: local
 
@@ -35,7 +35,7 @@
 
     - name: Wait for update node to be evacuated
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}:8006/api2/json/cluster/resources?type=vm"
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/resources?type=vm"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
