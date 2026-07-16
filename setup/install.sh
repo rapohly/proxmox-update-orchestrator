@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 echo "Detecting package manager..."
 
 if command -v apt >/dev/null 2>&1; then
@@ -23,9 +26,12 @@ echo "Installing dependencies..."
 sudo $INSTALL python3 ansible-core
 
 echo "Setting up Ansible directories..."
-mkdir -p ../ansible/inventories/group_vars/all
+mkdir -p "$PROJECT_ROOT/ansible/inventories/group_vars/all"
 
 echo "Configuring Ansible vault..."
-ansible-vault create ../ansible/inventories/group_vars/all/vault.yml
+ansible-vault create "$PROJECT_ROOT/ansible/inventories/group_vars/all/vault.yml"
+
+echo "Configuring runtime directory..."
+mkdir "$PROJECT_ROOT/runstate"
 
 echo "Done."
