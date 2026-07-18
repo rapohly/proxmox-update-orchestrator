@@ -1,6 +1,6 @@
 # Proxmox Cluster Maintenance Orchestrator
 
-A Python + Ansible-based orchestration tool for performing safe, automated, rolling maintenance across Proxmox clusters. It handles VM evacuation, node updates, reboots, and post-maintenance validation with cluster-aware decision making.
+A Python + Ansible-based orchestration tool for performing safe, automated, rolling maintenance across Proxmox clusters. It handles VM/CT evacuation, node updates, reboots, and post-maintenance validation with cluster-aware decision making.
 
 ---
 
@@ -27,7 +27,7 @@ Instead of manually coordinating node-by-node maintenance, this tool automates t
 
 ## Key Features
 
-* Cluster-aware VM evacuation planning
+* Cluster-aware VM and LXC evacuation planning
 * Rolling node maintenance (one node at a time)
 * Safe migration sequencing for minimal disruption
 * Ansible-driven execution layer for reliability and consistency

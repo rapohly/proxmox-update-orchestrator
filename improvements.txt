@@ -1,7 +1,8 @@
-get rid of hard-coded paths
+get rid of hard-coded paths - DONE
 add json reset on each run
 add output logging
 add check for start at boot yes
 create installation steps
 fail out immediately if not cluster
 build python CLI wrapper
+add requirements: DNS or /etc/hosts
