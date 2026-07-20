@@ -1,5 +1,4 @@
----
-- import_playbook: plan.yml                 
+---               
 - import_playbook: migrate.yml
 - import_playbook: update_node.yml
 - import_playbook: back_migrate.yml
