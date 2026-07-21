@@ -31,7 +31,7 @@ Instead of manually coordinating node-by-node maintenance, this tool automates t
 * Rolling node maintenance (one node at a time)
 * Safe migration sequencing for minimal disruption
 * Ansible-driven execution layer for reliability and consistency
-* Automated wait/retry logic for reboots and service recovery
+* Automated wait/retry logic for service recovery
 * Post-maintenance validation checks
 * Extensible architecture for custom policies and workflows
 
@@ -43,29 +43,30 @@ Instead of manually coordinating node-by-node maintenance, this tool automates t
 
 Responsible for:
 
-* Querying cluster state
 * Determining node maintenance order
-* Calculating VM migration strategy
+* Calculating VM/CT migration strategy
 * Tracking progress and failure states
-* Handling retries and rollback logic
 
 ### Ansible Execution Layer (Hands)
 
 Responsible for:
 
+* Querying node and VM/CT resource usage
 * Draining nodes (migration triggers)
 * Running system updates
 * Rebooting hosts
 * Verifying services and node readiness
+* Restoring the initial locations of VMs/CTs
 
 ---
 
 ## Requirements
 
 * Python 3.10+
-* Ansible Core (installed via pip)
+* Ansible Core
 * Sudo privileges on target nodes
-* Linux control machine (Proxmox Datacenter Manager recommended)
+* Proxmox Datacenter Manager
+* Working DNS OR a properly defined /etc/hosts file
 
 ---
 
@@ -84,60 +85,14 @@ cd proxmox-maintenance
 
 The installer will:
 
-* Create a Python virtual environment
-* Install Python dependencies
-* Install Ansible and required collections
+* Install dependencies
+* Query remotes.cfg for the list of configured clusters and nodes
 * Prepare runtime structure
 
 ---
 
 ## Configuration
-
-Configuration is typically managed via:
-
-* `config.yml` (cluster definition and behavior)
-* Ansible inventory file
-* Environment variables (optional secrets/credentials)
-
-Example cluster configuration:
-
-```yaml
-cluster_name: prod-cluster
-
-nodes:
-  - pve01
-  - pve02
-  - pve03
-
-maintenance:
-  rolling: true
-  max_parallel_nodes: 1
-  verify_services: true
-```
-
----
-
-## Usage
-
-Activate environment:
-
-```bash
-source .venv/bin/activate
-```
-
-Run maintenance:
-
-```bash
-python src/main.py --cluster prod-cluster --mode update
-```
-
-Dry-run mode:
-
-```bash
-python src/main.py --cluster prod-cluster --mode plan
-```
-
----
+[Add when ready]
 
 ## Ansible Integration
 
@@ -163,10 +118,10 @@ Python -> records success and moves to next node
 The system is designed with failure containment in mind:
 
 * Only one node is serviced at a time by default
-* VM evacuation is validated before maintenance begins
+* VM/CT evacuation is validated before maintenance begins
 * Post-reboot health checks are mandatory
 * Failures halt the rolling process by default
-* No cluster-wide operations occur without explicit orchestration approval
+* No cluster-wide operations occur without passing a specific flag (rolling mode)
 
 ---
 
@@ -174,12 +129,12 @@ The system is designed with failure containment in mind:
 
 Planned improvements:
 
-* Intelligent VM placement optimization (load-aware balancing)
+* Improving the input for the LFGMP algorithm
 * Web UI for maintenance monitoring
-* Slack/Teams notifications
-* Parallel maintenance mode with risk thresholds
-* Proxmox API integration enhancements
 * Historical maintenance reporting
+* Logging
+* Adjustable batch sizes, with a recommended default estimated by analyzing node metadata
+* A simple, easy to use custom CLI
 
 ---
 
