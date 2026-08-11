@@ -23,7 +23,7 @@
 
     - name: Wait for Proxmox API to be available
       ansible.builtin.wait_for:
-        host: "{{ update_node }}"
+        host: "{{ migration_plan_data.update_node }}"
         port: 8006
         timeout: 600
         delay: 10
