@@ -181,6 +181,7 @@
         content: >-
           {{
             {
+              'target_cluster': target_cluster,
               'update_node': update_node,
               'nodes': node_metrics,
               'vms_to_evac': vm_metrics,

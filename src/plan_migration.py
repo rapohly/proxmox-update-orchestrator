@@ -141,6 +141,7 @@ if __name__ == "__main__":
     with open(inventory_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    target_cluster = data["target_cluster"]
     update_node = data["update_node"]
 
     nodes = [
@@ -187,6 +188,7 @@ if __name__ == "__main__":
         placements = place_workloads(workloads, nodes)
 
         output = {
+            "target_cluster": target_cluster,
             "update_node": update_node,
             "migration_plan": placements,
         }
