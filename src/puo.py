@@ -46,6 +46,9 @@ def run_execute() -> None:
         cwd=ANSIBLE_DIR,
     )
 
+    if MIGRATION_PLAN_FILE.exists():
+        MIGRATION_PLAN_FILE.unlink()
+        
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="puo",

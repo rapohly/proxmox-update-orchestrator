@@ -1,5 +1,5 @@
 get rid of hard-coded paths - DONE
-add json reset on each run
+add json reset on each run - DONE
 add output logging
 add check for start at boot yes
 create installation steps
