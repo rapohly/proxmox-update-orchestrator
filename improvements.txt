@@ -7,3 +7,5 @@ fail out immediately if not cluster
 build python CLI wrapper
 add requirements: DNS or /etc/hosts
 validate that we are a cluster
+adjustable batch size
+with-disks adjustable

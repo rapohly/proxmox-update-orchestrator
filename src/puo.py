@@ -8,8 +8,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ANSIBLE_DIR = PROJECT_ROOT / "ansible"
 PLAYBOOK_DIR = ANSIBLE_DIR / "playbooks"
-RUNSTATE_DIR = PROJECT_ROOT / "runstate"
-CLI_STATE_FILE = RUNSTATE_DIR / "cli_state.json"
+MIGRATION_PLAN_FILE = PROJECT_ROOT / "runstate" / "migration_plan.json"
 
 def run_plan(cluster: str, node: str) -> None:
     playbook = PLAYBOOK_DIR / "plan.yml"
@@ -27,25 +26,13 @@ def run_plan(cluster: str, node: str) -> None:
         cwd=ANSIBLE_DIR,
     )
 
-    RUNSTATE_DIR.mkdir(exist_ok=True)
-
-    with CLI_STATE_FILE.open("w") as f:
-        json.dump(
-            {
-                "target_cluster": cluster,
-                "update_node": node,
-            },
-            f,
-            indent=2,
-        )
-
 def run_execute() -> None:
     playbook = PLAYBOOK_DIR / "execute.yml"
 
-    with CLI_STATE_FILE.open() as f:
-        state = json.load(f)
+    with MIGRATION_PLAN_FILE.open() as f:
+        migration_plan = json.load(f)
 
-    target_cluster = state["target_cluster"]
+    target_cluster = migration_plan["target_cluster"]
 
     subprocess.run(
         [

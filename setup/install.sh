@@ -26,7 +26,19 @@ echo "Installing dependencies..."
 sudo $INSTALL python3 ansible-core
 
 if [[ ! -f "$PROJECT_ROOT/src/init.py" ]]; then
-    echo "Error: parse_remotes.py not found."
+    echo "Error: init.py not found."
+    exit 1
+fi
+
+echo "Installing PUO CLI..."
+chmod +x "$PROJECT_ROOT/src/puo.py"
+sudo ln -sf "$PROJECT_ROOT/src/puo.py" /usr/local/bin/puo
+
+echo "Verifying PUO CLI..."
+if command -v puo >/dev/null 2>&1; then
+    echo "PUO CLI installed successfully."
+else
+    echo "Failed to install PUO CLI."
     exit 1
 fi
 
