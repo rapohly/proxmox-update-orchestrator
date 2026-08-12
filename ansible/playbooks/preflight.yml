@@ -1,0 +1,31 @@
+---
+- name: Perform pre-flight checks
+  hosts: "{{ groups[target_cluster] | first }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Collect VM list from update_node
+      ansible.builtin.uri:
+        url:  "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: update_node_vms
+
+    - name: Collect VM configurations
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/config"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      loop: "{{ update_node_vms.json.data }}"
+      register: vm_configs
+
+    - name: Show mounted CD drives data
+      ansible.builtin.debug:
+        var: vm_configs.results
