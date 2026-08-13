@@ -1,11 +1,10 @@
 get rid of hard-coded paths - DONE
 add json reset on each run - DONE
 add output logging
-add check for start at boot yes
+add check for start at boot yes - DONE
 create installation steps
-fail out immediately if not cluster
+fail out immediately if not cluster - DONE
 build python CLI wrapper
 add requirements: DNS or /etc/hosts
-validate that we are a cluster
 adjustable batch size
 with-disks adjustable
