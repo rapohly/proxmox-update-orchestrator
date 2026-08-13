@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import json
+import re
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -10,14 +11,22 @@ ANSIBLE_DIR = PROJECT_ROOT / "ansible"
 PLAYBOOK_DIR = ANSIBLE_DIR / "playbooks"
 MIGRATION_PLAN_FILE = PROJECT_ROOT / "runstate" / "migration_plan.json"
 
+def sanitize_group_name(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_]", "_", name)
+
 def run_plan(cluster: str, node: str) -> None:
     playbook = PLAYBOOK_DIR / "plan.yml"
+
+    inventory_group = sanitize_group_name(cluster)
+
     subprocess.run(
         [
             "ansible-playbook",
             str(playbook),
             "-e",
             f"target_cluster={cluster}",
+            "-e",
+            f"inventory_group={inventory_group}",
             "-e",
             f"update_node={node}",
             "--ask-vault-pass",
@@ -33,13 +42,14 @@ def run_execute() -> None:
         migration_plan = json.load(f)
 
     target_cluster = migration_plan["target_cluster"]
+    inventory_group = sanitize_group_name(target_cluster)
 
     subprocess.run(
         [
             "ansible-playbook",
             str(playbook),
             "-e",
-            f"target_cluster={target_cluster}",
+            f"inventory_group={inventory_group}",
             "--ask-vault-pass",
         ],
         check=True,

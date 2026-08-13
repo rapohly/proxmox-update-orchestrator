@@ -1,6 +1,6 @@
 ---
 - name: Execute Proxmox workload back-migration plan
-  hosts: "{{ groups[target_cluster] | first }}"
+  hosts: "{{ groups[inventory_group] | first }}"
   gather_facts: false
   connection: local
 

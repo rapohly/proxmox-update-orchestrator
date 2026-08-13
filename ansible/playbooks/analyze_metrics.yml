@@ -1,0 +1,178 @@
+---
+- name: Query Proxmox node metrics
+  hosts: "{{ groups[inventory_group] | first }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Get CPU info for each node
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ item.node }}/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      loop: "{{ node_list.json.data }}"
+      register: node_status
+
+    - name: Get node RRD metrics
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ item.node }}/rrddata?timeframe=hour"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+      loop: "{{ node_list.json.data }}"
+      register: node_rrd
+      no_log: true
+
+    - name: Show first RRD data point
+      ansible.builtin.debug:
+        var: node_rrd.results[0].json.data[0]
+      
+    - name: Build sanitized node IO metrics
+      ansible.builtin.set_fact:
+        node_io_metrics: "{{ node_io_metrics | default({}) | combine({
+          item.item.node: {
+          'iowait': item.json.data | map(attribute='iowait') | select('defined') | list | sum / (item.json.data | length),
+          'pressureiosome': item.json.data | map(attribute='pressureiosome') | select('defined') | list | sum / (item.json.data | length),
+          'pressureiofull': item.json.data | map(attribute='pressureiofull') | select('defined') | list | sum / (item.json.data | length)
+        }}) }}"
+      loop: "{{ node_rrd.results }}"
+      no_log: true
+
+    - name: Build sanitized node metrics
+      ansible.builtin.set_fact:
+        node_metrics: "{{ node_metrics | default([]) + [ {
+          'node': item.item.node,
+          'cpu': item.json.data.cpu,
+          'maxcpu': item.json.data.cpuinfo.cpus,
+          'mem_used_bytes': item.json.data.memory.used,
+          'mem_total_bytes': item.json.data.memory.total,
+          'iowait': node_io_metrics[item.item.node].iowait | default(0),
+          'pressureiosome': node_io_metrics[item.item.node].pressureiosome | default(0),
+          'pressureiofull': node_io_metrics[item.item.node].pressureiofull | default(0)        
+        } ] }}"
+      loop: "{{ node_status.results}}"
+      no_log: true
+
+    - name: Collect VM list from update_node
+      ansible.builtin.uri:
+        url:  "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: update_node_vms
+
+    - name: Collect VM metrics
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+      loop: "{{ update_node_vms.json.data }}"
+      register: update_node_vm_status
+      no_log: true
+
+    - name: Initialize VM metrics
+      ansible.builtin.set_fact:
+        vm_metrics: []
+
+    - name: Build VM metrics for update_node
+      ansible.builtin.set_fact:
+        vm_metrics: "{{ vm_metrics | default([]) + [ {
+          'vmid': item.item.vmid,
+          'name': item.json.data.name | default(item.item.name | default('unknown')),
+          'node': update_node,
+          'status': item.json.data.status | default(item.item.status | default('unknown')),
+          'cpu': item.json.data.cpu | default(0),
+          'maxcpu': item.json.data.cpus | default(item.item.cpus | default(0)),
+          'mem_used_bytes': item.json.data.mem | default(0),
+          'mem_total_bytes': item.json.data.maxmem | default(item.item.maxmem | default(0)),
+          'diskread': item.json.data.diskread | default(0),
+          'diskwrite': item.json.data.diskwrite | default(0),
+          'io_counter_bytes': (
+            (item.json.data.diskread | default(0)) +
+            (item.json.data.diskwrite | default(0))
+          )
+        } ] }}"
+      loop: "{{ update_node_vm_status.results }}"
+      no_log: true
+
+    - name: Collect CT list from update_node
+      ansible.builtin.uri:
+        url:  "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: update_node_cts
+
+    - name: Collect CT metrics
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc/{{ item.vmid }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+      loop: "{{ update_node_cts.json.data }}"
+      register: update_node_ct_status
+      no_log: true    
+
+    - name: Initialize CT metrics
+      ansible.builtin.set_fact:
+        ct_metrics: []
+
+    - name: Build CT metrics for update_node
+      ansible.builtin.set_fact:
+        ct_metrics: "{{ ct_metrics | default([]) + [ {
+          'vmid': item.item.vmid,
+          'name': item.json.data.name | default(item.item.name | default('unknown')),
+          'node': update_node,
+          'status': item.json.data.status | default(item.item.status | default('unknown')),
+          'cpu': item.json.data.cpu | default(0),
+          'maxcpu': item.json.data.cpus | default(item.item.cpus | default(0)),
+          'mem_used_bytes': item.json.data.mem | default(0),
+          'mem_total_bytes': item.json.data.maxmem | default(item.item.maxmem | default(0)),
+          'diskread': item.json.data.diskread | default(0),
+          'diskwrite': item.json.data.diskwrite | default(0),
+          'io_counter_bytes': (
+            (item.json.data.diskread | default(0)) +
+            (item.json.data.diskwrite | default(0))
+          )
+        } ] }}"
+      loop: "{{ update_node_ct_status.results }}"
+      no_log: true
+
+    - name: Save sanitized inventory
+      ansible.builtin.copy:
+        content: >-
+          {{
+            {
+              'target_cluster': target_cluster,
+              'update_node': update_node,
+              'nodes': node_metrics,
+              'vms_to_evac': vm_metrics,
+              'cts_to_evac': ct_metrics
+            } | to_nice_json
+          }}
+        dest: "{{ playbook_dir | dirname | dirname }}/runstate/proxmox_inventory.json"
+        mode: '0600'
+
+    - name: Run migration planner
+      ansible.builtin.command:
+        argv:
+          - python3
+          - src/plan_migration.py
+          - runstate/proxmox_inventory.json
+        chdir: "{{ playbook_dir | dirname | dirname }}"
+      register: migration_plan
+
+    - name: Show planner output
+      ansible.builtin.debug:
+        var: migration_plan.stdout_lines

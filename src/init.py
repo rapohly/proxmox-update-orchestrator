@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import re
 from pathlib import Path
 
 
@@ -36,6 +37,8 @@ GROUP_VARS_PATH = (
     / "group_vars"
 )
 
+def sanitize_group_name(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_]", "_", name)
 
 def parse_remotes() -> tuple[dict, list[str]]:
     if not REMOTES_PATH.is_file():
@@ -69,6 +72,8 @@ def parse_remotes() -> tuple[dict, list[str]]:
                 raise ValueError(
                     f"Missing cluster name on line {line_number}."
                 )
+            
+            current_cluster = sanitize_group_name(current_cluster)
 
             if current_cluster in inventory["all"]["children"]:
                 raise ValueError(

@@ -1,10 +1,51 @@
 ---
 - name: Perform pre-flight checks
-  hosts: "{{ groups[target_cluster] | first }}"
+  hosts: "{{ groups[inventory_group] | first }}"
   gather_facts: false
   connection: local
 
   tasks:
+    - name: Require update_node
+      ansible.builtin.assert:
+        that:
+          - update_node is defined
+          - update_node | length > 0
+        fail_msg: "You must pass update_node, for example: -e 'update_node=pve03'"
+
+    - name: Get cluster status
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: cluster_status
+
+    - name: Validate Proxmox cluster
+      ansible.builtin.assert:
+        that:
+          - (cluster_status.json.data | selectattr('type', 'equalto', 'cluster') | list | length) == 1
+          - (cluster_status.json.data | selectattr('type', 'equalto', 'cluster') | first).nodes | int >= 3
+          - (cluster_status.json.data | selectattr('type', 'equalto', 'cluster') | first).quorate | int == 1
+        fail_msg: "PUO requires a quorate Proxmox cluster with at least three nodes."
+
+    - name: Get node list
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: node_list
+
+    - name: Validate update_node exists in cluster
+      ansible.builtin.assert:
+        that:
+          - update_node in (node_list.json.data | map(attribute='node') | list)
+        fail_msg: "Node {{ update_node }} does not exist in this cluster"
+    
     - name: Collect VM list from update_node
       ansible.builtin.uri:
         url:  "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu"
@@ -26,6 +67,91 @@
       loop: "{{ update_node_vms.json.data }}"
       register: vm_configs
 
-    - name: Show mounted CD drives data
-      ansible.builtin.debug:
-        var: vm_configs.results
+    - name: Collect CT list from update_node
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      register: update_node_cts
+
+    - name: Collect CT configurations
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc/{{ item.vmid }}/config"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      loop: "{{ update_node_cts.json.data }}"
+      register: ct_configs
+
+    - name: Find VMs with CD drives
+      ansible.builtin.set_fact:
+        vms_with_mounted_iso: >-
+          {{
+            vms_with_mounted_iso | default([]) +
+            [{
+              'vmid': vm_config.item.vmid,
+              'name': vm_config.item.name,
+              'ide2': vm_config.json.data.ide2
+            }]
+          }}
+      loop: "{{ vm_configs.results }}"
+      loop_control:
+        loop_var: vm_config
+      when: 
+        - "'ide2' in vm_config.json.data"
+        - not vm_config.json.data.ide2.startswith('none')
+    
+    - name: Fail if VMs have a mounted ISO
+      ansible.builtin.fail:
+        msg: "Found mounted ISO on CD-ROM media drive! Please remove ISO from the following and re-run this step: {{ vms_with_mounted_iso }}"
+      when: vms_with_mounted_iso | default([]) | length > 0
+
+    - name: Find running VMs with start at boot disabled
+      ansible.builtin.set_fact:
+        vms_onboot_disabled: >-
+          {{
+            vms_onboot_disabled | default([]) +
+            [{
+              'vmid': vm_config.item.vmid,
+              'name': vm_config.item.name
+            }]
+          }}
+      loop: "{{ vm_configs.results }}"
+      loop_control:
+        loop_var: vm_config
+      when:
+        - vm_config.item.status == 'running'
+        - vm_config.json.data.onboot | default(0) | int == 0
+
+    - name: Find running CTs with start at boot disabled
+      ansible.builtin.set_fact:
+        cts_onboot_disabled: >-
+          {{
+            cts_onboot_disabled | default([]) +
+            [{
+              'vmid': ct_config.item.vmid,
+              'name': ct_config.item.name
+            }]
+          }}
+      loop: "{{ ct_configs.results }}"
+      loop_control:
+        loop_var: ct_config
+      when:
+        - ct_config.item.status == 'running'
+        - ct_config.json.data.onboot | default(0) | int == 0
+
+    - name: Fail if running guests have start at boot disabled
+      ansible.builtin.fail:
+        msg: >-
+          Found running guests with start at boot disabled.
+          VMs: {{ vms_onboot_disabled | default([]) }}
+          CTs: {{ cts_onboot_disabled | default([]) }}
+      when:
+        - >
+          (vms_onboot_disabled | default([]) | length > 0) or
+          (cts_onboot_disabled | default([]) | length > 0)
