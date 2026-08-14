@@ -155,3 +155,88 @@
         - >
           (vms_onboot_disabled | default([]) | length > 0) or
           (cts_onboot_disabled | default([]) | length > 0)
+
+    - name: Get VM snapshot data
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/qemu/{{ item.vmid }}/snapshot"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      loop: "{{ update_node_vms.json.data }}"
+      register: vm_snapshots
+
+    - name: Find VMs with snapshots
+      ansible.builtin.set_fact:
+        vms_with_snapshots: >-
+          {{
+            vms_with_snapshots | default([]) +
+            [{
+              'vmid': snapshot_result.item.vmid,
+              'name': snapshot_result.item.name,
+              'snapshots': (
+                snapshot_result.json.data
+                | rejectattr('name', 'equalto', 'current')
+                | map(attribute='name')
+                | list
+              )
+            }]
+          }}
+      loop: "{{ vm_snapshots.results }}"
+      loop_control:
+        loop_var: snapshot_result
+      when:
+        - >
+          snapshot_result.json.data
+          | rejectattr('name', 'equalto', 'current')
+          | list
+          | length > 0
+
+    - name: Get CT snapshot data
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/nodes/{{ update_node }}/lxc/{{ item.vmid }}/snapshot"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ pve_token_id }}={{ pve_token_secret }}"
+        validate_certs: false
+        return_content: true
+      loop: "{{ update_node_cts.json.data }}"
+      register: ct_snapshots
+
+    - name: Find CTs with snapshots
+      ansible.builtin.set_fact:
+        cts_with_snapshots: >-
+          {{
+            cts_with_snapshots | default([]) +
+            [{
+              'vmid': snapshot_result.item.vmid,
+              'name': snapshot_result.item.name,
+              'snapshots': (
+                snapshot_result.json.data
+                | rejectattr('name', 'equalto', 'current')
+                | map(attribute='name')
+                | list
+              )
+            }]
+          }}
+      loop: "{{ ct_snapshots.results }}"
+      loop_control:
+        loop_var: snapshot_result
+      when:
+        - >
+          snapshot_result.json.data
+          | rejectattr('name', 'equalto', 'current')
+          | list
+          | length > 0
+
+    - name: Fail if guests have snapshots
+      ansible.builtin.fail:
+        msg: >-
+          Found snapshots that will prevent migration.
+          VMs: {{ vms_with_snapshots | default([]) }}
+          CTs: {{ cts_with_snapshots | default([]) }}
+      when:
+        - >
+          (vms_with_snapshots | default([]) | length > 0) or
+          (cts_with_snapshots | default([]) | length > 0)
