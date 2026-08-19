@@ -30,6 +30,12 @@ if [[ ! -f "$PROJECT_ROOT/src/init.py" ]]; then
     exit 1
 fi
 
+echo "Creating log directory..."
+if [ ! -d "$PROJECT_ROOT/logs" ]; then
+    mkdir "$PROJECT_ROOT/logs"
+    echo "Log directory created!"
+fi
+
 echo "Installing PUO CLI..."
 chmod +x "$PROJECT_ROOT/src/puo.py"
 sudo ln -sf "$PROJECT_ROOT/src/puo.py" /usr/local/bin/puo

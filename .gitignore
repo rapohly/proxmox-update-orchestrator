@@ -1,3 +1,4 @@
 ansible/inventories/*
 runstate/*
 .ssh/*
+logs/*

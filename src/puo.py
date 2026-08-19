@@ -5,11 +5,13 @@ import subprocess
 import json
 import re
 from pathlib import Path
+from datetime import datetime
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ANSIBLE_DIR = PROJECT_ROOT / "ansible"
 PLAYBOOK_DIR = ANSIBLE_DIR / "playbooks"
 MIGRATION_PLAN_FILE = PROJECT_ROOT / "runstate" / "migration_plan.json"
+LOG_DIR = PROJECT_ROOT / "logs"
 
 def sanitize_group_name(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "_", name)
@@ -44,7 +46,11 @@ def run_execute() -> None:
     target_cluster = migration_plan["target_cluster"]
     inventory_group = sanitize_group_name(target_cluster)
 
-    subprocess.run(
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_file = LOG_DIR / f"puo-{timestamp}.log"
+
+    with log_file.open("w") as log:
+        process = subprocess.Popen(
         [
             "ansible-playbook",
             str(playbook),
@@ -52,9 +58,25 @@ def run_execute() -> None:
             f"inventory_group={inventory_group}",
             "--ask-vault-pass",
         ],
-        check=True,
         cwd=ANSIBLE_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
     )
+
+        for line in process.stdout:
+                print(line, end="")
+                log.write(line)
+                log.flush()
+
+    return_code = process.wait()
+
+    if return_code != 0:
+        raise subprocess.CalledProcessError(
+            return_code,
+            process.args,
+        )
 
     if MIGRATION_PLAN_FILE.exists():
         MIGRATION_PLAN_FILE.unlink()
