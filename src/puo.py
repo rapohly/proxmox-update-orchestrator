@@ -37,7 +37,7 @@ def run_plan(cluster: str, node: str) -> None:
         cwd=ANSIBLE_DIR,
     )
 
-def run_execute() -> None:
+def run_execute(batch_size: int) -> None:
     playbook = PLAYBOOK_DIR / "execute.yml"
 
     with MIGRATION_PLAN_FILE.open() as f:
@@ -56,6 +56,8 @@ def run_execute() -> None:
             str(playbook),
             "-e",
             f"inventory_group={inventory_group}",
+            "-e",
+            f"batch_size={batch_size}",
             "--ask-vault-pass",
         ],
         cwd=ANSIBLE_DIR,
@@ -110,9 +112,17 @@ def main() -> None:
         help="Proxmox node to update",
     )
 
-    subparsers.add_parser(
+    exec_parser = subparsers.add_parser(
         "execute",
         help="Execute the current maintenance plan",
+    )
+
+    exec_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=4,
+        required=False,
+        help="Specify how many workloads should migrate simultaneously. Default: 4.",
     )
 
     args = parser.parse_args()
@@ -125,9 +135,8 @@ def main() -> None:
         run_plan(args.cluster, args.node)
 
     elif args.command == "execute":
-        print("Executing maintenance plan")
-        run_execute()
-
+        print(f"Executing maintenance plan with batch size {args.batch_size}")
+        run_execute(args.batch_size)
 
 if __name__ == "__main__":
     main()

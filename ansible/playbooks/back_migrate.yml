@@ -31,7 +31,7 @@
 
     - name: Build back-migration batches
       ansible.builtin.set_fact:
-        migration_batches: "{{ migration_plan_data.migration_plan | batch(4) | list }}"
+        migration_batches: "{{ migration_plan_data.migration_plan | batch(batch_size | int) | list }}"
 
     - name: Run workload back-migration batches
       ansible.builtin.include_tasks: migrate_batch.yml
