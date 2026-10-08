@@ -86,7 +86,7 @@ def run_execute(batch_size: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="puo",
-        description="Automated Proxmox cluster maintenance",
+        description="Automated Proxmox cluster update tool",
         epilog="Written by R. Pohly",
     )
 

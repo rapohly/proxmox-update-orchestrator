@@ -29,6 +29,7 @@
   become: false
 
   tasks:
+  # Possibly remove this, unclear if needed
     - name: Confirm SSH user
       ansible.builtin.command: whoami
       register: whoami_result
