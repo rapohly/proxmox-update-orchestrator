@@ -73,10 +73,10 @@ Responsible for:
 ## Installation
 
 ```bash
-git clone https://your-repo-url/proxmox-maintenance.git
-cd proxmox-maintenance
+git clone https://github.com/rapohly/proxmox-update-orchestrator.git
+cd proxmox-update-orchestrator
 
-./install.sh
+bash setup/install.sh
 ```
 
 ---
